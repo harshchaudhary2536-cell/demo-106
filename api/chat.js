@@ -1,6 +1,4 @@
 export default async function handler(req, res) {
-  console.log("🚀 OPENROUTER RUNNING");
-
   try {
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Only POST allowed" });
@@ -19,8 +17,8 @@ export default async function handler(req, res) {
 
     const prompt = `You are MindEase, a funny chill best friend.
 - Keep replies short
-- Use casual language
-- If user sad → comfort + joke
+- Use casual tone
+- If user is sad → comfort + light joke
 
 User: ${userText}
 MindEase:`;
@@ -32,30 +30,18 @@ MindEase:`;
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "mistralai/mistral-7b-instruct",
+        model: "openrouter/auto",
         messages: [
           { role: "user", content: prompt }
         ]
       })
     });
 
-    const raw = await response.text();
-    console.log("RAW:", raw);
-
-    let data;
-    try {
-      data = JSON.parse(raw);
-    } catch {
-      return res.status(500).json({
-        error: "INVALID JSON",
-        raw
-      });
-    }
+    const data = await response.json();
 
     if (!response.ok) {
       return res.status(500).json({
-        error: data.error?.message || "OpenRouter error",
-        full: data
+        error: data.error?.message || "OpenRouter error"
       });
     }
 
