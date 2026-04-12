@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MindEase Bot</title>
+
+<style>
+body {
+  margin:0;
+  font-family:sans-serif;
+  background:#0f172a;
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+#app {
+  width:400px;
+  height:600px;
+  background:#1e293b;
+  display:flex;
+  flex-direction:column;
+  border-radius:20px;
+  overflow:hidden;
+}
+
+#chat {
+  flex:1;
+  padding:10px;
+  overflow-y:auto;
+}
+
+.msg {
+  margin:5px;
+  padding:10px;
+  border-radius:10px;
+}
+
+.user {
+  background:#334155;
+  text-align:right;
+}
+
+.bot {
+  background:#111827;
+}
+
+.input-area {
+  display:flex;
+}
+
+input {
+  flex:1;
+  padding:10px;
+  border:none;
+  outline:none;
+}
+
+button {
+  width:60px;
+  border:none;
+  background:#00f2ff;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div id="app">
+  <div id="chat">
+    <div class="msg bot">Yo bro 😎 what's up?</div>
+  </div>
+
+  <div class="input-area">
+    <input id="input" placeholder="Vent here..." />
+    <button onclick="send()">➤</button>
+  </div>
+</div>
+
+<script>
+async function send() {
+  const input = document.getElementById("input");
+  const chat = document.getElementById("chat");
+
+  if (!input.value.trim()) return;
+
+  const msg = input.value;
+
+  chat.innerHTML += `<div class="msg user">${msg}</div>`;
+  input.value = "";
+
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ message: msg })
+    });
+
+    const contentType = res.headers.get("content-type");
+
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error("Server not connected");
+    }
+
+    const data = await res.json();
+
+    chat.innerHTML += `<div class="msg bot">${data.reply || data.error}</div>`;
+    chat.scrollTop = chat.scrollHeight;
+
+  } catch (e) {
+    chat.innerHTML += `<div class="msg bot">Server down bro 😭</div>`;
+  }
+}
+</script>
+
+</body>
+</html>
