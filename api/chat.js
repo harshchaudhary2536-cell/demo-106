@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  console.log("🔥 HF API HIT");
+  console.log("🚀 NEW HF VERSION RUNNING");
 
   try {
     if (req.method !== "POST") {
@@ -25,6 +25,7 @@ export default async function handler(req, res) {
 User: ${userText}
 MindEase:`;
 
+    // ✅ NEW WORKING ENDPOINT
     const response = await fetch(
       "https://router.huggingface.co/hf-inference/models/mistralai/Mistral-7B-Instruct-v0.3",
       {
@@ -47,7 +48,7 @@ MindEase:`;
     console.log("📡 HF STATUS:", response.status);
 
     const raw = await response.text();
-    console.log("📦 RAW:", raw);
+    console.log("📦 RAW RESPONSE:", raw);
 
     let data;
     try {
@@ -61,7 +62,7 @@ MindEase:`;
 
     if (!response.ok) {
       return res.status(500).json({
-        error: data.error || "HF error",
+        error: data.error || "HF ERROR",
         full: data
       });
     }
@@ -75,6 +76,8 @@ MindEase:`;
     });
 
   } catch (err) {
+    console.log("💥 SERVER CRASH:", err);
+
     return res.status(500).json({
       error: "SERVER ERROR",
       details: err.message
