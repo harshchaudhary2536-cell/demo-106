@@ -1,15 +1,15 @@
 export default async function handler(req, res) {
-  console.log("🔥 HF FINAL FIX RUNNING");
+  console.log("🚀 OPENROUTER RUNNING");
 
   try {
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Only POST allowed" });
     }
 
-    const HF_TOKEN = process.env.HUGGINGFACE_TOKEN;
+    const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 
-    if (!HF_TOKEN) {
-      return res.status(500).json({ error: "TOKEN NOT FOUND" });
+    if (!OPENROUTER_KEY) {
+      return res.status(500).json({ error: "OPENROUTER KEY NOT FOUND" });
     }
 
     const { messages } = req.body;
@@ -18,29 +18,26 @@ export default async function handler(req, res) {
       messages?.[messages.length - 1]?.parts?.[0]?.text || "Hello";
 
     const prompt = `You are MindEase, a funny chill best friend.
-Keep replies short, casual and supportive.
+- Keep replies short
+- Use casual language
+- If user sad → comfort + joke
 
 User: ${userText}
 MindEase:`;
 
-    // ✅ WORKING MODEL + ROUTER
-    const response = await fetch(
-      "https://router.huggingface.co/hf-inference/models/HuggingFaceH4/zephyr-7b-beta",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: 100,
-            temperature: 0.7
-          }
-        })
-      }
-    );
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENROUTER_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "mistralai/mistral-7b-instruct",
+        messages: [
+          { role: "user", content: prompt }
+        ]
+      })
+    });
 
     const raw = await response.text();
     console.log("RAW:", raw);
@@ -57,14 +54,12 @@ MindEase:`;
 
     if (!response.ok) {
       return res.status(500).json({
-        error: data.error || "HF ERROR",
+        error: data.error?.message || "OpenRouter error",
         full: data
       });
     }
 
-    const reply = Array.isArray(data)
-      ? data[0]?.generated_text
-      : data.generated_text;
+    const reply = data.choices?.[0]?.message?.content;
 
     return res.status(200).json({
       reply: reply || "No response 😭"
