@@ -1,45 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>MindEase Debug</title>
-
+<title>MindEase</title>
 <style>
-body {
-  margin:0;
-  background:#0f172a;
-  color:white;
-  font-family:sans-serif;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-}
-
-#app {
-  width:400px;
-  height:600px;
-  background:#1e293b;
-  display:flex;
-  flex-direction:column;
-  border-radius:20px;
-}
-
-#chat {
-  flex:1;
-  overflow:auto;
-  padding:10px;
-}
-
-.msg {
-  margin:5px;
-  padding:10px;
-  border-radius:10px;
-}
-
+body { background:#0f172a; color:white; font-family:sans-serif; display:flex; justify-content:center; align-items:center; height:100vh; }
+#app { width:400px; height:600px; background:#1e293b; display:flex; flex-direction:column; border-radius:20px; }
+#chat { flex:1; overflow:auto; padding:10px; }
+.msg { margin:5px; padding:10px; border-radius:10px; }
 .user { background:#334155; text-align:right; }
 .bot { background:#020617; white-space:pre-wrap; }
-
 input { flex:1; padding:10px; }
 button { width:60px; }
 </style>
@@ -49,7 +18,7 @@ button { width:60px; }
 
 <div id="app">
   <div id="chat">
-    <div class="msg bot">Debug Mode ON 🧠</div>
+    <div class="msg bot">OpenRouter Mode 🚀</div>
   </div>
 
   <div style="display:flex;">
@@ -63,13 +32,10 @@ let messages = [];
 
 function addMsg(text, type) {
   const chat = document.getElementById("chat");
-
   const div = document.createElement("div");
   div.className = "msg " + type;
   div.innerText = text;
-
   chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
 }
 
 async function send() {
@@ -78,7 +44,6 @@ async function send() {
   if (!input.value.trim()) return;
 
   const msg = input.value;
-
   addMsg(msg, "user");
 
   messages.push({
@@ -108,10 +73,6 @@ async function send() {
     addMsg("❌ FETCH ERROR: " + e.message, "bot");
   }
 }
-
-document.getElementById("input").addEventListener("keypress", e=>{
-  if(e.key==="Enter") send();
-});
 </script>
 
 </body>
