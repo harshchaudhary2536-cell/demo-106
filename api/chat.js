@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  console.log("🔥 FINAL HF VERSION RUNNING");
+  console.log("🔥 HF FINAL FIX RUNNING");
 
   try {
     if (req.method !== "POST") {
@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     const HF_TOKEN = process.env.HUGGINGFACE_TOKEN;
 
     if (!HF_TOKEN) {
-      return res.status(500).json({ error: "HUGGINGFACE TOKEN NOT FOUND" });
+      return res.status(500).json({ error: "TOKEN NOT FOUND" });
     }
 
     const { messages } = req.body;
@@ -18,14 +18,14 @@ export default async function handler(req, res) {
       messages?.[messages.length - 1]?.parts?.[0]?.text || "Hello";
 
     const prompt = `You are MindEase, a funny chill best friend.
-Keep replies short, casual and friendly.
+Keep replies short, casual and supportive.
 
 User: ${userText}
 MindEase:`;
 
-    // ✅ ONLY THIS URL (NO api-inference anywhere)
+    // ✅ WORKING MODEL + ROUTER
     const response = await fetch(
-      "https://router.huggingface.co/hf-inference/models/mistralai/Mistral-7B-Instruct-v0.3",
+      "https://router.huggingface.co/hf-inference/models/HuggingFaceH4/zephyr-7b-beta",
       {
         method: "POST",
         headers: {
@@ -36,21 +36,21 @@ MindEase:`;
           inputs: prompt,
           parameters: {
             max_new_tokens: 100,
-            temperature: 0.7,
-            return_full_text: false
+            temperature: 0.7
           }
         })
       }
     );
 
     const raw = await response.text();
+    console.log("RAW:", raw);
 
     let data;
     try {
       data = JSON.parse(raw);
     } catch {
       return res.status(500).json({
-        error: "INVALID JSON FROM HF",
+        error: "INVALID JSON",
         raw
       });
     }
