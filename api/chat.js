@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  console.log("🚀 NEW HF VERSION RUNNING");
+  console.log("🔥 FINAL HF VERSION RUNNING");
 
   try {
     if (req.method !== "POST") {
@@ -18,14 +18,12 @@ export default async function handler(req, res) {
       messages?.[messages.length - 1]?.parts?.[0]?.text || "Hello";
 
     const prompt = `You are MindEase, a funny chill best friend.
-- Keep replies short
-- Casual tone
-- Comfort + joke if sad
+Keep replies short, casual and friendly.
 
 User: ${userText}
 MindEase:`;
 
-    // ✅ NEW WORKING ENDPOINT
+    // ✅ ONLY THIS URL (NO api-inference anywhere)
     const response = await fetch(
       "https://router.huggingface.co/hf-inference/models/mistralai/Mistral-7B-Instruct-v0.3",
       {
@@ -37,7 +35,7 @@ MindEase:`;
         body: JSON.stringify({
           inputs: prompt,
           parameters: {
-            max_new_tokens: 120,
+            max_new_tokens: 100,
             temperature: 0.7,
             return_full_text: false
           }
@@ -45,17 +43,14 @@ MindEase:`;
       }
     );
 
-    console.log("📡 HF STATUS:", response.status);
-
     const raw = await response.text();
-    console.log("📦 RAW RESPONSE:", raw);
 
     let data;
     try {
       data = JSON.parse(raw);
     } catch {
       return res.status(500).json({
-        error: "INVALID JSON",
+        error: "INVALID JSON FROM HF",
         raw
       });
     }
@@ -76,8 +71,6 @@ MindEase:`;
     });
 
   } catch (err) {
-    console.log("💥 SERVER CRASH:", err);
-
     return res.status(500).json({
       error: "SERVER ERROR",
       details: err.message
