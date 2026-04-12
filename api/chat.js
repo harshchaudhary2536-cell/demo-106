@@ -3,47 +3,59 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Only POST allowed" });
   }
 
-  const API_KEY = process.env.GEMINI_API_KEY;
-
-  if (!API_KEY) {
-    return res.status(500).json({ error: "API key missing" });
-  }
-
   try {
+    const API_KEY = process.env.GEMINI_API_KEY;
+
+    if (!API_KEY) {
+      return res.status(500).json({ error: "❌ API key missing in Vercel" });
+    }
+
     const { messages } = req.body;
 
-    const system = `You are MindEase, a funny chill best friend.
-- Short replies
-- Casual tone
-- Comfort + joke if sad`;
+    const userMessage =
+      messages?.[messages.length - 1]?.parts?.[0]?.text || "Hello";
 
-    const contents = [
-      { role: "user", parts: [{ text: system }] },
-      ...messages
-    ];
+    const prompt = `You are MindEase, a funny chill best friend.
+Keep replies short, casual, and friendly.
+
+User: ${userMessage}
+MindEase:`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY}`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents })
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }]
+            }
+          ]
+        })
       }
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      return res.status(500).json({ error: data.error.message });
+      return res.status(500).json({
+        error: data.error?.message || "Gemini API error"
+      });
     }
 
     const reply =
       data.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "Bro lag ho gaya 😭";
+      "Bro I forgot what to say 😭";
 
-    res.status(200).json({ reply });
+    return res.status(200).json({ reply });
 
-  } catch {
-    res.status(500).json({ error: "Server error" });
+  } catch (err) {
+    return res.status(500).json({
+      error: "SERVER CRASH",
+      details: err.message
+    });
   }
 }
