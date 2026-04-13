@@ -16,15 +16,7 @@ body{
   color:white;
   height:100vh;
   display:flex;
-  background:linear-gradient(-45deg,#020617,#0f172a,#020617);
-  background-size:400% 400%;
-  animation:bg 10s infinite;
-}
-
-@keyframes bg{
-  0%{background-position:0% 50%;}
-  50%{background-position:100% 50%;}
-  100%{background-position:0% 50%;}
+  background:#020617;
 }
 
 /* MENU */
@@ -43,7 +35,6 @@ body{
 /* SIDEBAR */
 .sidebar{
   width:230px;
-  backdrop-filter:blur(10px);
   background:rgba(0,0,0,0.6);
   padding:15px;
 }
@@ -73,14 +64,7 @@ body{
   border-radius:50%;
   margin:10px;
   background:radial-gradient(circle,#00f2ff,#7000ff);
-  box-shadow:0 0 20px #00f2ff,0 0 40px #7000ff;
-  animation:pulse 2s infinite;
-}
-
-@keyframes pulse{
-  0%{transform:scale(1);}
-  50%{transform:scale(1.1);}
-  100%{transform:scale(1);}
+  box-shadow:0 0 20px #00f2ff;
 }
 
 /* CHAT */
@@ -108,7 +92,6 @@ body{
 .bot{
   align-self:flex-start;
   border:1px solid #00f2ff55;
-  box-shadow:0 0 10px #00f2ff33;
 }
 
 /* INPUT */
@@ -117,7 +100,7 @@ body{
   width:100%;
   padding:10px;
   gap:5px;
-  background:rgba(0,0,0,0.5);
+  background:#020617;
 }
 
 input{
@@ -163,7 +146,6 @@ button{
   <button onclick="setMode('chill')">😌 Chill</button>
   <button onclick="setMode('funny')">😂 Funny</button>
   <button onclick="setMode('savage')">😈 Savage</button>
-  <button onclick="toggleCall()">📞 Call</button>
 </div>
 
 <div class="main">
@@ -186,7 +168,6 @@ button{
 <script>
 let messages=[];
 let mode="chill";
-let callMode=false;
 let recognition;
 let isListening=false;
 
@@ -197,42 +178,18 @@ function toggleMenu(){
 
 function setMode(m){mode=m;}
 
-function toggleCall(){
-  callMode=!callMode;
-  if(callMode) startVoice();
-}
-
-// AVATAR WAVE
-function showWave(){
-  const avatar=document.getElementById("avatar");
-  avatar.style.boxShadow="0 0 50px #00f2ff,0 0 100px #7000ff";
-}
-
-function hideWave(){
-  const avatar=document.getElementById("avatar");
-  avatar.style.boxShadow="0 0 20px #00f2ff";
-}
-
-// SPEAK
+// SPEAK (FIXED)
 function speak(text){
-  const avatar=document.getElementById("avatar");
-
   window.speechSynthesis.cancel();
 
   const speech=new SpeechSynthesisUtterance(text);
   speech.lang="en-IN";
-
-  avatar.style.transform="scale(1.2)";
-
-  speech.onend=()=>{
-    avatar.style.transform="scale(1)";
-    if(callMode) startVoice();
-  };
+  speech.rate=1;
 
   window.speechSynthesis.speak(speech);
 }
 
-// VOICE
+// VOICE INPUT (FIXED)
 function startVoice(){
   if(isListening) return;
 
@@ -242,8 +199,6 @@ function startVoice(){
   recognition.lang="en-IN";
   isListening=true;
 
-  showWave();
-
   recognition.onresult=(e)=>{
     const text=e.results[0][0].transcript;
     document.getElementById("input").value=text;
@@ -252,33 +207,32 @@ function startVoice(){
 
   recognition.onend=()=>{
     isListening=false;
-    hideWave();
   };
 
   recognition.start();
 }
 
 function stopVoice(){
-  callMode=false;
   window.speechSynthesis.cancel();
   if(recognition) recognition.stop();
 }
 
-// TYPE EFFECT
+// TYPE EFFECT (FIXED)
 function typeEffect(el,text){
-  let i=0;
   el.innerText="";
-  function typing(){
-    if(i<text.length){
-      el.innerText+=text.charAt(i);
-      i++;
-      setTimeout(typing,15);
+  let i=0;
+
+  const interval=setInterval(()=>{
+    el.innerText+=text[i];
+    i++;
+
+    if(i>=text.length){
+      clearInterval(interval);
     }
-  }
-  typing();
+  },20);
 }
 
-// ADD MSG
+// ADD MESSAGE (FIXED)
 function addMsg(text,type){
   const chat=document.getElementById("chat");
 
@@ -290,34 +244,53 @@ function addMsg(text,type){
 
   if(type==="bot"){
     typeEffect(div,text);
-    speak(text);
-  } else {
+    setTimeout(()=>speak(text),100);
+  }else{
     div.innerText=text;
   }
 }
 
-// SEND
+// SEND (FIXED)
 async function send(){
   const input=document.getElementById("input");
+
   if(!input.value.trim()) return;
 
   const msg=input.value;
+
   addMsg(msg,"user");
 
-  messages.push({role:"user",parts:[{text:msg}]});
-  input.value="";
-
-  const res=await fetch("/api/chat",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({messages,mode})
+  messages.push({
+    role:"user",
+    parts:[{text:msg}]
   });
 
-  const data=await res.json();
+  input.value="";
 
-  addMsg(data.reply,"bot");
+  try{
+    const res=await fetch("/api/chat",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({messages,mode})
+    });
 
-  messages.push({role:"model",parts:[{text:data.reply}]});
+    const data=await res.json();
+
+    if(!res.ok){
+      addMsg("Something went wrong 😭","bot");
+      return;
+    }
+
+    addMsg(data.reply,"bot");
+
+    messages.push({
+      role:"model",
+      parts:[{text:data.reply}]
+    });
+
+  }catch{
+    addMsg("Server error 😭","bot");
+  }
 }
 
 // ENTER
