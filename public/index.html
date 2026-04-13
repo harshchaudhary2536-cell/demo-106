@@ -1,40 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MindEase Neon AI ⚡</title>
+<title>MindEase AI ⚡</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron&family=Inter&display=swap" rel="stylesheet">
 
 <style>
 *{box-sizing:border-box;}
 
 body{
   margin:0;
-  font-family:sans-serif;
-  display:flex;
-  height:100vh;
-  background:linear-gradient(135deg,#020617,#0f172a);
+  font-family:'Inter';
   color:white;
+  height:100vh;
+  display:flex;
+  background:#020617;
+}
+
+/* MENU */
+#menuBtn{
+  display:none;
+  position:fixed;
+  top:10px;
+  left:10px;
+  z-index:1000;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  background:#00f2ff;
 }
 
 /* SIDEBAR */
 .sidebar{
   width:230px;
-  background:#020617;
-  border-right:1px solid #00f2ff33;
-  padding:10px;
-  overflow:auto;
+  background:rgba(0,0,0,0.6);
+  padding:15px;
 }
 
-.chat-item{
-  padding:8px;
+.sidebar h2{
+  font-family:'Orbitron';
+  color:#00f2ff;
+}
+
+.sidebar button{
+  width:100%;
   margin:5px 0;
-  background:#111;
-  border-radius:6px;
-  cursor:pointer;
-}
-
-.chat-item:hover{
-  box-shadow:0 0 10px #00f2ff;
 }
 
 /* MAIN */
@@ -42,11 +54,23 @@ body{
   flex:1;
   display:flex;
   flex-direction:column;
+  align-items:center;
+}
+
+/* AVATAR */
+#avatar{
+  width:60px;
+  height:60px;
+  border-radius:50%;
+  margin:10px;
+  background:radial-gradient(circle,#00f2ff,#7000ff);
+  box-shadow:0 0 20px #00f2ff;
 }
 
 /* CHAT */
 #chat{
   flex:1;
+  width:100%;
   overflow:auto;
   padding:10px;
   display:flex;
@@ -54,26 +78,26 @@ body{
 }
 
 .msg{
+  max-width:75%;
   padding:10px;
   margin:5px;
   border-radius:10px;
-  max-width:70%;
 }
 
 .user{
-  background:#334155;
   align-self:flex-end;
+  background:#334155;
 }
 
 .bot{
-  background:#020617;
+  align-self:flex-start;
   border:1px solid #00f2ff55;
-  box-shadow:0 0 10px #00f2ff33;
 }
 
 /* INPUT */
 .input-area{
   display:flex;
+  width:100%;
   padding:10px;
   gap:5px;
   background:#020617;
@@ -84,7 +108,7 @@ input{
   padding:10px;
   border-radius:10px;
   border:none;
-  background:#111;
+  background:#020617;
   color:white;
 }
 
@@ -94,156 +118,185 @@ button{
   border-radius:8px;
   background:linear-gradient(45deg,#00f2ff,#7000ff);
   color:white;
-  cursor:pointer;
 }
 
-button:hover{
-  box-shadow:0 0 10px #00f2ff;
+/* MOBILE */
+@media(max-width:768px){
+  #menuBtn{display:block;}
+
+  .sidebar{
+    position:fixed;
+    left:-250px;
+    top:0;
+    height:100%;
+    transition:0.3s;
+  }
+
+  .sidebar.active{left:0;}
 }
 </style>
 </head>
 
 <body>
 
+<button id="menuBtn" onclick="toggleMenu()">☰</button>
+
 <div class="sidebar">
-  <button onclick="newChat()">+ New Chat</button>
-  <div id="history"></div>
+  <h2>MindEase ⚡</h2>
+  <button onclick="setMode('chill')">😌 Chill</button>
+  <button onclick="setMode('funny')">😂 Funny</button>
+  <button onclick="setMode('savage')">😈 Savage</button>
 </div>
 
 <div class="main">
 
-<div id="chat"></div>
+<div id="avatar"></div>
+
+<div id="chat">
+  <div class="msg bot">Kya scene hai bro 😎</div>
+</div>
 
 <div class="input-area">
-  <input id="input" placeholder="Talk to me..." />
+  <input id="input" placeholder="Bol ya likh..." />
   <button onclick="startVoice()">🎤</button>
+  <button onclick="stopVoice()">⏹️</button>
   <button onclick="send()">➤</button>
 </div>
 
 </div>
 
 <script>
-let chats = JSON.parse(localStorage.getItem("chats")) || [];
-let currentChat = null;
+let messages=[];
+let mode="chill";
 let recognition;
+let isListening=false;
 
-// HISTORY
-function loadHistory(){
-  const history=document.getElementById("history");
-  history.innerHTML="";
-
-  chats.forEach((chat,index)=>{
-    const div=document.createElement("div");
-    div.className="chat-item";
-    div.innerText=chat.title||"Chat "+(index+1);
-    div.onclick=()=>loadChat(index);
-    history.appendChild(div);
-  });
+// MENU
+function toggleMenu(){
+  document.querySelector(".sidebar").classList.toggle("active");
 }
 
-// NEW CHAT
-function newChat(){
-  const chat={title:"New Chat",messages:[]};
-  chats.push(chat);
-  currentChat=chats.length-1;
-  save();
-  renderChat();
-  loadHistory();
-}
+function setMode(m){mode=m;}
 
-// LOAD CHAT
-function loadChat(index){
-  currentChat=index;
-  renderChat();
-}
-
-// SAVE
-function save(){
-  localStorage.setItem("chats",JSON.stringify(chats));
-}
-
-// RENDER
-function renderChat(){
-  const chatDiv=document.getElementById("chat");
-  chatDiv.innerHTML="";
-
-  if(currentChat===null) return;
-
-  chats[currentChat].messages.forEach(m=>{
-    addMsg(m.parts[0].text,m.role==="user"?"user":"bot");
-  });
-}
-
-// ADD MESSAGE
-function addMsg(text,type){
-  const chat=document.getElementById("chat");
-  const div=document.createElement("div");
-  div.className="msg "+type;
-  div.innerText=text;
-  chat.appendChild(div);
-  chat.scrollTop=chat.scrollHeight;
-
-  if(type==="bot") speak(text);
-}
-
-// SPEAK
+// SPEAK (FIXED)
 function speak(text){
+  window.speechSynthesis.cancel();
+
   const speech=new SpeechSynthesisUtterance(text);
   speech.lang="en-IN";
+  speech.rate=1;
+
   window.speechSynthesis.speak(speech);
 }
 
-// VOICE INPUT
+// VOICE INPUT (FIXED)
 function startVoice(){
+  if(isListening) return;
+
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   recognition=new SR();
-  recognition.lang="en-IN";
 
-  recognition.onresult=e=>{
-    document.getElementById("input").value=e.results[0][0].transcript;
+  recognition.lang="en-IN";
+  isListening=true;
+
+  recognition.onresult=(e)=>{
+    const text=e.results[0][0].transcript;
+    document.getElementById("input").value=text;
     send();
+  };
+
+  recognition.onend=()=>{
+    isListening=false;
   };
 
   recognition.start();
 }
 
-// SEND
+function stopVoice(){
+  window.speechSynthesis.cancel();
+  if(recognition) recognition.stop();
+}
+
+// TYPE EFFECT (FIXED)
+function typeEffect(el,text){
+  el.innerText="";
+  let i=0;
+
+  const interval=setInterval(()=>{
+    el.innerText+=text[i];
+    i++;
+
+    if(i>=text.length){
+      clearInterval(interval);
+    }
+  },20);
+}
+
+// ADD MESSAGE (FIXED)
+function addMsg(text,type){
+  const chat=document.getElementById("chat");
+
+  const div=document.createElement("div");
+  div.className="msg "+type;
+  chat.appendChild(div);
+
+  chat.scrollTop=chat.scrollHeight;
+
+  if(type==="bot"){
+    typeEffect(div,text);
+    setTimeout(()=>speak(text),100);
+  }else{
+    div.innerText=text;
+  }
+}
+
+// SEND (FIXED)
 async function send(){
   const input=document.getElementById("input");
+
   if(!input.value.trim()) return;
 
   const msg=input.value;
+
   addMsg(msg,"user");
 
-  chats[currentChat].messages.push({
+  messages.push({
     role:"user",
     parts:[{text:msg}]
   });
 
   input.value="";
-  save();
 
-  const res=await fetch("/api/chat",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({messages:chats[currentChat].messages})
-  });
+  try{
+    const res=await fetch("/api/chat",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({messages,mode})
+    });
 
-  const data=await res.json();
+    const data=await res.json();
 
-  addMsg(data.reply,"bot");
+    if(!res.ok){
+      addMsg("Something went wrong 😭","bot");
+      return;
+    }
 
-  chats[currentChat].messages.push({
-    role:"model",
-    parts:[{text:data.reply}]
-  });
+    addMsg(data.reply,"bot");
 
-  save();
+    messages.push({
+      role:"model",
+      parts:[{text:data.reply}]
+    });
+
+  }catch{
+    addMsg("Server error 😭","bot");
+  }
 }
 
-// INIT
-newChat();
-loadHistory();
+// ENTER
+document.getElementById("input").addEventListener("keypress",e=>{
+  if(e.key==="Enter") send();
+});
 </script>
 
 </body>
