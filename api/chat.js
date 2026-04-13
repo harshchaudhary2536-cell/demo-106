@@ -7,13 +7,10 @@ export default async function handler(req, res) {
     const GROQ_KEY = process.env.GROQ_API_KEY;
 
     if (!GROQ_KEY) {
-      return res.status(500).json({ error: "GROQ KEY NOT FOUND" });
+      return res.status(500).json({ error: "Missing API key" });
     }
 
-    const { messages, mode } = req.body;
-
-    const userText =
-      messages?.[messages.length - 1]?.parts?.[0]?.text || "Hello";
+    const { messages } = req.body;
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -27,56 +24,32 @@ export default async function handler(req, res) {
           {
             role: "system",
             content: `
-You are MindEase — an emotionally intelligent AI best friend.
+You are MindEase — a real human-like best friend.
 
-Detect emotion and respond accordingly:
-
-- Sad → comfort deeply
-- Angry → calm + validate
-- Stressed → relax + simplify
-- Overthinking → ground gently
-- Normal → chill friendly
-
-Mode:
-${mode === "savage" ? "Be funny + savage 😈" : ""}
-${mode === "funny" ? "Be playful 😂" : ""}
-${mode === "chill" ? "Be calm 😌" : ""}
-
-Rules:
-- Talk like a real friend
-- Short replies
-- Casual tone
-- No robotic talk
-- No long lectures
-
-Make user feel better always.
+- Talk like normal texting
+- No "User:" or "Assistant:"
+- Never write emoji names
+- Use real emojis 😄🔥🤍
+- Keep spacing natural
+- Reply in same language (Hindi/English/Hinglish)
+- Be supportive, chill, funny when needed
 `
           },
-          {
-            role: "user",
-            content: userText
-          }
+          ...messages.map(m => ({
+            role: m.role === "model" ? "assistant" : "user",
+            content: m.parts[0].text
+          }))
         ]
       })
     });
 
     const data = await response.json();
 
-    if (!response.ok) {
-      return res.status(500).json({
-        error: data.error?.message || "Groq error"
-      });
-    }
-
     const reply = data.choices?.[0]?.message?.content;
 
-    return res.status(200).json({
-      reply: reply || "I'm here bro 🤍"
-    });
+    return res.status(200).json({ reply });
 
   } catch (err) {
-    return res.status(500).json({
-      error: err.message
-    });
+    return res.status(500).json({ error: err.message });
   }
 }
