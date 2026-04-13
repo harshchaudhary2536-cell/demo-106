@@ -54,13 +54,11 @@ body{
   flex:1;
   display:flex;
   flex-direction:column;
-  align-items:center;
 }
 
 /* CHAT */
 #chat{
   flex:1;
-  width:100%;
   overflow:auto;
   padding:10px;
   display:flex;
@@ -87,7 +85,6 @@ body{
 /* INPUT */
 .input-area{
   display:flex;
-  width:100%;
   padding:10px;
   gap:5px;
   background:#020617;
@@ -139,20 +136,18 @@ button{
   <button onclick="setMode('savage')">😈 Savage</button>
 
   <button onclick="toggleCall()">📞 Call Mode</button>
+  <button onclick="toggleWake()">🧠 Wake Mode</button>
 
   <button onclick="toggleLang()">🌐 UI Language</button>
 
-  <button onclick="setVoice('female')">👩 Female Voice</button>
-  <button onclick="setVoice('male')">👨 Male Voice</button>
-
-  <button onclick="setTone('calm')">😌 Calm Tone</button>
-  <button onclick="setTone('fast')">⚡ Energetic</button>
+  <button onclick="setVoice('female')">👩 Female</button>
+  <button onclick="setVoice('male')">👨 Male</button>
 </div>
 
 <div class="main">
 
 <div id="chat">
-  <div class="msg bot">Kya scene hai bro 😎</div>
+  <div class="msg bot">Say "Hey MindEase" to activate 🤖</div>
 </div>
 
 <div class="input-area">
@@ -170,87 +165,75 @@ let mode="chill";
 let recognition;
 let isListening=false;
 let callMode=false;
-let currentLang="en";
-
+let wakeMode=false;
 let voiceType="female";
-let tone="calm";
 
 // MENU
 function toggleMenu(){
   document.querySelector(".sidebar").classList.toggle("active");
 }
 
-// MODE
 function setMode(m){mode=m;}
 
-// UI LANGUAGE
+// 🌐 UI
 function toggleLang(){
-  currentLang = currentLang==="en" ? "hi" : "en";
-  document.getElementById("input").placeholder =
-    currentLang==="hi" ? "Yahan likho ya bolo..." : "Type or speak...";
+  const input=document.getElementById("input");
+  input.placeholder=input.placeholder==="Type or speak..." ? "Yahan likho ya bolo..." : "Type or speak...";
 }
 
-// VOICE SETTINGS
-function setVoice(v){ voiceType=v; }
-function setTone(t){ tone=t; }
+// 🧠 WAKE MODE
+function toggleWake(){
+  wakeMode=!wakeMode;
+  alert(wakeMode ? "Wake Mode ON 🤖" : "Wake Mode OFF");
+
+  if(wakeMode){
+    startWakeListening();
+  }
+}
 
 // 📞 CALL MODE
 function toggleCall(){
   callMode=!callMode;
-  alert(callMode ? "Call Mode ON 📞" : "Call Mode OFF");
-
   if(callMode) startVoice();
 }
 
-// 🧠 DETECT LANGUAGE
-function detectLang(text){
-  const hindi=/[\u0900-\u097F]/;
-  return hindi.test(text) ? "hi-IN" : "en-IN";
+// 🎤 WAKE LISTEN
+function startWakeListening(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recognition=new SR();
+
+  recognition.continuous=true;
+  recognition.lang="en-IN";
+
+  recognition.onresult=(e)=>{
+    const text=e.results[e.results.length-1][0].transcript.toLowerCase();
+
+    if(text.includes("hey mindease")){
+      speak("haan bolo 🤖");
+      startVoice();
+    }
+  };
+
+  recognition.start();
 }
 
-// 🎭 EMOTION DETECT
-function detectEmotion(text){
-  text=text.toLowerCase();
-
-  if(text.includes("sad")||text.includes("low")||text.includes("cry")) return "sad";
-  if(text.includes("angry")||text.includes("mad")) return "angry";
-  if(text.includes("happy")||text.includes("great")) return "happy";
-
-  return "normal";
-}
-
-// 🔊 SPEAK (ULTIMATE)
+// 🔊 SPEAK + INTERRUPT
 function speak(text){
   window.speechSynthesis.cancel();
 
   const speech=new SpeechSynthesisUtterance(text);
+  speech.lang="en-IN";
 
-  // 🌐 language auto
-  speech.lang=detectLang(text);
-
-  // 🎭 emotion
-  const emotion=detectEmotion(text);
-
-  if(tone==="calm"){
-    speech.rate=0.9;
-  } else {
-    speech.rate=1.2;
-  }
-
-  if(emotion==="sad") speech.rate=0.8;
-  if(emotion==="happy") speech.rate=1.2;
-
-  // 👩‍🦰 voice selection
   const voices=window.speechSynthesis.getVoices();
+  speech.voice = voiceType==="female" ? voices[0] : voices[1];
 
-  if(voiceType==="female"){
-    speech.voice = voices.find(v=>v.name.toLowerCase().includes("female")) || voices[0];
-  } else {
-    speech.voice = voices.find(v=>v.name.toLowerCase().includes("male")) || voices[1];
-  }
+  speech.onstart=()=>{
+    if(recognition) recognition.stop(); // interrupt listening
+  };
 
   speech.onend=()=>{
     if(callMode) startVoice();
+    if(wakeMode) startWakeListening();
   };
 
   window.speechSynthesis.speak(speech);
@@ -280,6 +263,7 @@ function startVoice(){
 // STOP
 function stopAll(){
   callMode=false;
+  wakeMode=false;
   window.speechSynthesis.cancel();
   if(recognition) recognition.stop();
 }
