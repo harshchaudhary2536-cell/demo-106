@@ -26,7 +26,7 @@ export default async function handler(req, res) {
             content: `
 You are MindEase — a real human-like best friend.
 
-- Talk like normal texting
+- Talk naturally like texting
 - No "User:" or "Assistant:"
 - Never write emoji names
 - Use real emojis 😄🔥🤍
@@ -45,9 +45,9 @@ You are MindEase — a real human-like best friend.
 
     const data = await response.json();
 
-    const reply = data.choices?.[0]?.message?.content;
-
-    return res.status(200).json({ reply });
+    return res.status(200).json({
+      reply: data.choices?.[0]?.message?.content || "I'm here 🤍"
+    });
 
   } catch (err) {
     return res.status(500).json({ error: err.message });
