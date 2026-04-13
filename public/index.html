@@ -137,17 +137,12 @@ button{
 
   <button onclick="toggleCall()">📞 Call Mode</button>
   <button onclick="toggleWake()">🧠 Wake Mode</button>
-
-  <button onclick="toggleLang()">🌐 UI Language</button>
-
-  <button onclick="setVoice('female')">👩 Female</button>
-  <button onclick="setVoice('male')">👨 Male</button>
 </div>
 
 <div class="main">
 
 <div id="chat">
-  <div class="msg bot">Say "Hey MindEase" to activate 🤖</div>
+  <div class="msg bot">Say "Hey MindEase" 🤖</div>
 </div>
 
 <div class="input-area">
@@ -161,40 +156,35 @@ button{
 
 <script>
 let messages=[];
-let mode="chill";
 let recognition;
 let isListening=false;
 let callMode=false;
 let wakeMode=false;
-let voiceType="female";
+
+let voices=[];
+
+// LOAD VOICES PROPERLY
+window.speechSynthesis.onvoiceschanged = () => {
+  voices = window.speechSynthesis.getVoices();
+};
 
 // MENU
 function toggleMenu(){
   document.querySelector(".sidebar").classList.toggle("active");
 }
 
-function setMode(m){mode=m;}
-
-// 🌐 UI
-function toggleLang(){
-  const input=document.getElementById("input");
-  input.placeholder=input.placeholder==="Type or speak..." ? "Yahan likho ya bolo..." : "Type or speak...";
-}
-
-// 🧠 WAKE MODE
-function toggleWake(){
-  wakeMode=!wakeMode;
-  alert(wakeMode ? "Wake Mode ON 🤖" : "Wake Mode OFF");
-
-  if(wakeMode){
-    startWakeListening();
-  }
-}
+function setMode(m){}
 
 // 📞 CALL MODE
 function toggleCall(){
   callMode=!callMode;
   if(callMode) startVoice();
+}
+
+// 🧠 WAKE MODE
+function toggleWake(){
+  wakeMode=!wakeMode;
+  if(wakeMode) startWakeListening();
 }
 
 // 🎤 WAKE LISTEN
@@ -209,7 +199,7 @@ function startWakeListening(){
     const text=e.results[e.results.length-1][0].transcript.toLowerCase();
 
     if(text.includes("hey mindease")){
-      speak("haan bolo 🤖");
+      speak("haan bolo");
       startVoice();
     }
   };
@@ -217,19 +207,26 @@ function startWakeListening(){
   recognition.start();
 }
 
-// 🔊 SPEAK + INTERRUPT
+// 🔥 FINAL SPEAK FIX (AUTO LANGUAGE + FORCE VOICE)
 function speak(text){
   window.speechSynthesis.cancel();
 
   const speech=new SpeechSynthesisUtterance(text);
-  speech.lang="en-IN";
 
-  const voices=window.speechSynthesis.getVoices();
-  speech.voice = voiceType==="female" ? voices[0] : voices[1];
+  const isHindi=/[\u0900-\u097F]/.test(text);
 
-  speech.onstart=()=>{
-    if(recognition) recognition.stop(); // interrupt listening
-  };
+  let selectedVoice;
+
+  if(isHindi){
+    selectedVoice = voices.find(v => v.lang.toLowerCase().includes("hi"));
+    speech.lang="hi-IN";
+  } else {
+    selectedVoice = voices.find(v => v.lang.toLowerCase().includes("en"));
+    speech.lang="en-IN";
+  }
+
+  speech.voice = selectedVoice || voices[0];
+  speech.rate = 1;
 
   speech.onend=()=>{
     if(callMode) startVoice();
@@ -268,7 +265,7 @@ function stopAll(){
   if(recognition) recognition.stop();
 }
 
-// TYPE EFFECT
+// TYPE EFFECT (SPACE FIXED)
 function typeEffect(el,text){
   let i=0;
   function typing(){
@@ -281,7 +278,7 @@ function typeEffect(el,text){
   typing();
 }
 
-// ADD MSG
+// ADD MESSAGE
 function addMsg(text,type){
   const chat=document.getElementById("chat");
 
@@ -314,7 +311,7 @@ async function send(){
     const res=await fetch("/api/chat",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({messages,mode})
+      body:JSON.stringify({messages})
     });
 
     const data=await res.json();
