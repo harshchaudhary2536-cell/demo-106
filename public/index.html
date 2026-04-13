@@ -75,6 +75,7 @@ button {
 .input-area {
   display:flex;
   padding:10px;
+  gap:5px;
 }
 
 input {
@@ -85,7 +86,6 @@ input {
   background:#020617;
   color:white;
 }
-
 </style>
 </head>
 
@@ -118,27 +118,57 @@ input {
 let messages = [];
 let mode = "chill";
 
-let recognition;
+let recognition = null;
 let isListening = false;
 
-// MODE
+// 🎭 MODE
 function setMode(m) {
   mode = m;
   alert("Mode: " + m);
 }
 
-// SPEECH
-function speak(text) {
-  window.speechSynthesis.cancel();
-
-  const speech = new SpeechSynthesisUtterance(text);
-  speech.lang = "en-US";
-  speech.rate = 1;
-
-  window.speechSynthesis.speak(speech);
+// ✅ CHECK VOICE SUPPORT
+function initVoice() {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    alert("Voice not supported. Use Google Chrome.");
+    return false;
+  }
+  return true;
 }
 
-// STOP
+// 🎤 START VOICE INPUT
+function startVoice() {
+  if (!initVoice()) return;
+  if (isListening) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+  recognition.continuous = false;
+
+  isListening = true;
+
+  recognition.onresult = (event) => {
+    const text = event.results[0][0].transcript;
+    document.getElementById("input").value = text;
+    send();
+  };
+
+  recognition.onerror = (event) => {
+    alert("Mic error: " + event.error);
+    isListening = false;
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+  };
+
+  recognition.start();
+}
+
+// ⏹️ STOP VOICE
 function stopVoice() {
   window.speechSynthesis.cancel();
 
@@ -148,7 +178,20 @@ function stopVoice() {
   }
 }
 
-// ADD MESSAGE
+// 🔊 SPEAK OUTPUT
+function speak(text) {
+  if (!('speechSynthesis' in window)) return;
+
+  window.speechSynthesis.cancel();
+
+  const speech = new SpeechSynthesisUtterance(text);
+  speech.lang = "en-US";
+  speech.rate = 1;
+
+  window.speechSynthesis.speak(speech);
+}
+
+// 💬 ADD MESSAGE
 function addMsg(text, type) {
   const chat = document.getElementById("chat");
 
@@ -162,29 +205,7 @@ function addMsg(text, type) {
   if (type === "bot") speak(text);
 }
 
-// VOICE INPUT
-function startVoice() {
-  if (isListening) return;
-
-  recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  recognition.lang = "en-US";
-
-  isListening = true;
-
-  recognition.onresult = (e) => {
-    const text = e.results[0][0].transcript;
-    document.getElementById("input").value = text;
-    send();
-  };
-
-  recognition.onend = () => {
-    isListening = false;
-  };
-
-  recognition.start();
-}
-
-// SEND
+// 🚀 SEND MESSAGE
 async function send() {
   const input = document.getElementById("input");
 
@@ -195,34 +216,41 @@ async function send() {
   addMsg(msg, "user");
 
   messages.push({
-    role:"user",
-    parts:[{text:msg}]
+    role: "user",
+    parts: [{ text: msg }]
   });
 
   input.value = "";
 
   try {
     const res = await fetch("/api/chat", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({messages, mode})
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ messages, mode })
     });
 
     const data = await res.json();
 
+    if (!res.ok) {
+      addMsg("⚠️ " + data.error, "bot");
+      return;
+    }
+
     addMsg(data.reply, "bot");
 
     messages.push({
-      role:"model",
-      parts:[{text:data.reply}]
+      role: "model",
+      parts: [{ text: data.reply }]
     });
 
   } catch {
-    addMsg("Error bro 😭", "bot");
+    addMsg("❌ Server error", "bot");
   }
 }
 
-// ENTER SEND
+// ⌨️ ENTER KEY
 document.getElementById("input").addEventListener("keypress", e=>{
   if(e.key==="Enter") send();
 });
